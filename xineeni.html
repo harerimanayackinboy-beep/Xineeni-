@@ -50,7 +50,7 @@ textarea{width:100%;min-height:80px;padding:10px;border:1px solid var(--ln);bord
   <div class="card"><div class="row"><span class="lbl">⚙️ Processor</span><span class="val" id="cpu">…</span></div></div>
   <div class="card"><div class="row"><span class="lbl">🧠 Memoire (RAM)</span><span class="val" id="ram">…</span></div></div>
   <div class="card"><div class="row"><span class="lbl">📶 Murandasi</span><span class="val" id="net">…</span></div><div class="note" id="netn"></div></div>
-  <button class="btn" id="notifBtn">Emera notifications</button>
+  <button class="btn" id="notifBtn">Emera notifications</button><p class="note" id="help"></p>
   <p class="note"><span id="upd"></span><br>Igenzura buri masegonda 5 igihe iri rakinguye. Ububiko bwa telefone ntibusomwa na web app; AI izobubaza.</p>
 </section>
 
@@ -108,8 +108,8 @@ function problems(){
 async function ping(text){
   try{
     if('Notification' in window&&Notification.permission==='granted'){
-      const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
-      if(reg)reg.showNotification('Xineeni',{body:text});else new Notification('Xineeni',{body:text});
+      const reg=await navigator.serviceWorker.ready;
+      await reg.showNotification('Xineeni',{body:text});
     }
   }catch(e){}
 }
@@ -124,13 +124,20 @@ function check(){
   Object.keys(notified).forEach(k=>{if(!p.some(x=>x.k===k))delete notified[k]});
 }
 
+function setBtn(){
+  const p=('Notification' in window)?Notification.permission:'none';
+  $('notifBtn').textContent=p==='granted'?'Gerageza notification 🔔':p==='denied'?'Notifications zirahagaritswe':p==='none'?'Ntibishoboka kuri iyi browser':'Emera notifications';
+}
 $('notifBtn').onclick=async()=>{
   try{
-    if(!('Notification' in window)){$('notifBtn').textContent='Ntibishoboka kuri iyi browser';return}
-    const r=await Notification.requestPermission();
-    $('notifBtn').textContent=r==='granted'?'Notifications zirakora ✅':'Notifications zirahagaritswe';
-  }catch(e){$('notifBtn').textContent='Ntibishoboka hano'}
+    if(!('Notification' in window))return;
+    if(Notification.permission==='default')await Notification.requestPermission();
+    if(Notification.permission==='granted'){$('help').textContent='';await ping('Notification ikora neza ✅')}
+    else if(Notification.permission==='denied')$('help').textContent='Kugira ngo zikore: ⋮ → Settings → Site settings → Notifications → shakisha iyi site → Allow.';
+  }catch(e){}
+  setBtn();
 };
+setBtn();
 
 // AI
 const hist=[];
@@ -157,6 +164,7 @@ $('ask').onclick=async()=>{
   $('ask').disabled=false;
 };
 
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 readAll();setInterval(readAll,5000);
 if(navigator.getBattery)navigator.getBattery().then(b=>{['levelchange','chargingchange'].forEach(ev=>b.addEventListener(ev,readAll))}).catch(()=>{});
 addEventListener('online',readAll);addEventListener('offline',readAll);
